@@ -1,6 +1,6 @@
 import streamlit as st
 import re
-
+import plotly.graph_objects as go
 
 class Presentation:
     def __init__(self,cnn_ref_text,cnn_ref_summaries,cnn_tfidf_ret,cnn_presumm_ret,
@@ -74,7 +74,14 @@ class Presentation:
         else:
             self.show_cnn(doc_i)
 
-
+    # def display_newsroom_tfidf(self, doc_i):
+    #     sentences_by_scores = self.ref_newsroom_data[doc_i]['text']
+    #     x = list(range(len(sentences_by_scores)))
+    #     y = [sentence[2] for sentence in sorted(sentences_by_scores, key=lambda sentence: sentence[0])]
+    #     top_n_tfidf = self.tfidf_newsroom[doc_i]#[:self.n_sentences]
+    #     # top_n_presumm = self.presumm_newsroom[doc_i]#[:self.n_sentences]
+    #     # top_n_presumm = sorted(top_n_presumm, key=lambda sentence: text.find(sentence))
+    #
     def show_newsroom(self, i):
         text = self.ref_newsroom_data[i]['text']
         top_n_tfidf = self.tfidf_newsroom[i][:self.n_sentences]
@@ -90,6 +97,7 @@ class Presentation:
 
         st.markdown(highlighted_text, unsafe_allow_html=True)
 
+        self.display_tfidf(i, 'Newsroom')
 
         st.subheader('Reference Summary')
         st.markdown(re.sub("(.{64})", "\\1\n", self.ref_newsroom_data[i]['summary'], 0, re.DOTALL))
@@ -103,6 +111,20 @@ class Presentation:
         for sentence in top_n_presumm:
             st.markdown('{}\n'.format(sentence))
 
+    def display_tfidf(self, doc_i, dataset):
+        if dataset == 'CNN':
+            sentences_by_scores = self.cnn_tfidf_ret[doc_i]
+        else:
+            sentences_by_scores = self.tfidf_newsroom[doc_i]
+
+        x = list(range(len(sentences_by_scores)))
+        y = [sentence[2] for sentence in sorted(sentences_by_scores, key=lambda sentence: sentence[0])]
+
+        fig = go.Figure(data=go.Scatter(x=x, y=y, mode='lines+markers', ))
+        fig.update_layout(title='tf-idf by sentence\'s position',
+                          xaxis_title='position',
+                          yaxis_title='tf-idf')
+        st.plotly_chart(fig)
 
     def show_cnn(self, doc_i):
         text = self.cnn_ref_text[doc_i].replace('``', '""')
@@ -117,12 +139,17 @@ class Presentation:
 
         st.markdown(highlighted_text, unsafe_allow_html=True)
 
+        self.display_tfidf(doc_i,'CNN')
+
+
         st.subheader('Reference Summary')
         st.markdown('{}'.format(
             self.cnn_ref_summaries[doc_i]))
         st.subheader('My Summary')
 
         sorted_summ = sorted(top_n_tfidf, key=lambda sentence: sentence[0])
+
+
         for sentence in sorted_summ:
             st.markdown('{}\n'.format(sentence[1]))
 
