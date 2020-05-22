@@ -121,8 +121,8 @@ class Presentation:
         y = [sentence[2] for sentence in sorted(sentences_by_scores, key=lambda sentence: sentence[0])]
 
         fig = go.Figure(data=go.Scatter(x=x, y=y, mode='lines+markers', ))
-        fig.update_layout(title='tf-idf by sentence\'s position',
-                          xaxis_title='position',
+        fig.update_layout(title='tf-idf by sentence\'s position in text',
+                          xaxis_title='position in text',
                           yaxis_title='tf-idf')
         st.plotly_chart(fig)
 
