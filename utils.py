@@ -2,6 +2,8 @@ import streamlit as st
 import re
 import plotly.graph_objects as go
 
+
+
 class Presentation:
     def __init__(self,cnn_ref_text,cnn_ref_summaries,cnn_tfidf_ret,cnn_presumm_ret,
                  presumm_newsroom,tfidf_newsroom,ref_newsroom_data,n_sentences=5,colors= {0:'#D0F15F',1:'#90F9E3',2:'#E9B2ED'}):
@@ -74,17 +76,12 @@ class Presentation:
         else:
             self.show_cnn(doc_i)
 
-    # def display_newsroom_tfidf(self, doc_i):
-    #     sentences_by_scores = self.ref_newsroom_data[doc_i]['text']
-    #     x = list(range(len(sentences_by_scores)))
-    #     y = [sentence[2] for sentence in sorted(sentences_by_scores, key=lambda sentence: sentence[0])]
-    #     top_n_tfidf = self.tfidf_newsroom[doc_i]#[:self.n_sentences]
-    #     # top_n_presumm = self.presumm_newsroom[doc_i]#[:self.n_sentences]
-    #     # top_n_presumm = sorted(top_n_presumm, key=lambda sentence: text.find(sentence))
-    #
+
     def show_newsroom(self, i):
         text = self.ref_newsroom_data[i]['text']
         top_n_tfidf = self.tfidf_newsroom[i][:self.n_sentences]
+        print('>0<')
+        print(self.tfidf_newsroom[i][:self.n_sentences])
         top_n_presumm = self.presumm_newsroom[i][:self.n_sentences]
         top_n_presumm = sorted(top_n_presumm,key=lambda sentence: text.find(sentence))
 
@@ -111,7 +108,9 @@ class Presentation:
         for sentence in top_n_presumm:
             st.markdown('{}\n'.format(sentence))
 
+
     def display_tfidf(self, doc_i, dataset):
+        #st.subheader('tf-idf by sentence\'s position in text')
         if dataset == 'CNN':
             sentences_by_scores = self.cnn_tfidf_ret[doc_i]
         else:
@@ -129,6 +128,8 @@ class Presentation:
     def show_cnn(self, doc_i):
         text = self.cnn_ref_text[doc_i].replace('``', '""')
         top_n_tfidf = self.cnn_tfidf_ret[doc_i][:self.n_sentences]
+        print('T T')
+        print(self.cnn_tfidf_ret[doc_i][:self.n_sentences])
         top_n_presumm = self.cnn_presumm_ret[doc_i][:self.n_sentences]
         top_n_presumm = sorted(top_n_presumm, key=lambda sentence: text.find(sentence))
         sentences_group = dict()
