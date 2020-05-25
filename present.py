@@ -83,18 +83,8 @@ def run_app_smart():
 
 def run_app_simple():
 
-    # cnn_ref_text, cnn_ref_summaries, cnn_tfidf_ret, cnn_presumm_ret,
-    # presumm_newsroom, tfidf_newsroom, ref_newsroom_data
-
     data = load_data()
-    # cnn_ref_text,cnn_ref_summaries,cnn_tfidf_ret,cnn_presumm_ret,
-    #              presumm_newsroom,tfidf_newsroom,ref_newsroom_data
     presentation = Presentation(data['cnn_ref_text'],data['cnn_ref_summaries'],data['cnn_tfidf_ret'],data['cnn_presumm_ret'],data['presumm_newsroom'],data['tfidf_newsroom'],data['ref_newsroom_data'])
-    #
-    # st.title('Rank sentences by TF-IDF')
-    # st.markdown('<p style="font-size:17px"><span style="background-color: {}">My summary</span>'.format(colors_dict[0]),unsafe_allow_html=True)
-    # st.markdown('<p style="font-size:17px"><span style="background-color: {}">Their summary</span>'.format(colors_dict[1]),unsafe_allow_html=True)
-    # st.markdown('<p style="font-size:17px"><span style="background-color: {}">Both</span>'.format(colors_dict[2]),unsafe_allow_html=True)
 
     dataset = st.sidebar.radio('Dataset',('Newsroom','CNN'))
     presentation.set_dataset(dataset)
