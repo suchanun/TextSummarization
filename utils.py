@@ -80,8 +80,8 @@ class Presentation:
     def show_newsroom(self, i):
         text = self.ref_newsroom_data[i]['text']
         top_n_tfidf = self.tfidf_newsroom[i][:self.n_sentences]
-        print('>0<')
-        print(self.tfidf_newsroom[i][:self.n_sentences])
+        # print('>0<')
+        # print(self.tfidf_newsroom[i][:self.n_sentences])
         top_n_presumm = self.presumm_newsroom[i][:self.n_sentences]
         top_n_presumm = sorted(top_n_presumm,key=lambda sentence: text.find(sentence))
 
@@ -128,8 +128,8 @@ class Presentation:
     def show_cnn(self, doc_i):
         text = self.cnn_ref_text[doc_i].replace('``', '""')
         top_n_tfidf = self.cnn_tfidf_ret[doc_i][:self.n_sentences]
-        print('T T')
-        print(self.cnn_tfidf_ret[doc_i][:self.n_sentences])
+        # print('T T')
+        # print(self.cnn_tfidf_ret[doc_i][:self.n_sentences])
         top_n_presumm = self.cnn_presumm_ret[doc_i][:self.n_sentences]
         top_n_presumm = sorted(top_n_presumm, key=lambda sentence: text.find(sentence))
         sentences_group = dict()

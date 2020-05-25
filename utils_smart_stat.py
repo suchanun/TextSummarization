@@ -1,24 +1,24 @@
-# pickle.dump(presum_filenames,open('Presentation/data/cnn_filenames_1084.pkl','wb'))
 import os
 import numpy as np
 from nltk.corpus import stopwords
 import nltk.data
 from nltk.tokenize import word_tokenize
-nltk.download('punkt')
-nltk.download('wordnet')
-tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+# nltk.download('punkt')
+# nltk.download('wordnet')
+# nltk.download('stopwords')
 from nltk.stem.wordnet import WordNetLemmatizer
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import normalize
 import re
 import streamlit as st
 
-print(nltk.__version__)
-nltk.download('stopwords')
+
+
+tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 stoplist = stopwords.words('english')
 
+
 class Ranker:
-    '''for cnn data'''
 
     def __init__(self, folder_name, dataset, suffix='.story', n_docs=5000, stoplist=stopwords.words('english'),
                  smooth_idf=True, sentence_tokenize=tokenizer.tokenize, word_tokenize=word_tokenize):
@@ -52,18 +52,21 @@ class Ranker:
                                preprocessor=lambda x: re.sub(r'(\d[\d\.])+', '', x.lower()), stop_words=self.stoplist)
 
     def process_text(self, text):
-        ori_text = text
+        ori_text_nodouble_newline = re.sub(r'\n+', '\n', text).strip()
+        sentences = []
+        for paragraph in ori_text_nodouble_newline.split('\n'):
+            sentences.extend(self.sentence_tokenize(paragraph))  # self.sentence_tokenize(ori_text) self.sentence_tokenize(text)
+        n_sentences = len(sentences)
+
+
         text = text.lower()
         lemmatized_text = self.lemmatize(text)
         word_count_vectorizer = self.get_new_countvect()
         word_count = word_count_vectorizer.fit_transform([lemmatized_text]).toarray()[0]
         vocab = word_count_vectorizer.vocabulary_
-        sentences = self.sentence_tokenize(ori_text)#self.sentence_tokenize(text)
-        n_sentences = len(sentences)
+
         text_info = dict()
-        #         text_info['word_count'] = word_count
         text_info['word_freq'] = word_count / np.sum(word_count)
-        print(text_info['word_freq'].shape)
         text_info['vocab'] = vocab
         text_info['tfidf'] = self.get_tfidf_vect(text_info['word_freq'], text_info['vocab'])
         text_info['sentences'] = sentences
@@ -81,31 +84,20 @@ class Ranker:
             if word not in self.docs_vocab:
                 idf = d
             else:
-                if self.docs_word_freq[self.docs_vocab[word]] > self.n_docs:
-                    print(self.docs_word_freq[self.docs_vocab[word]])
-                    print(self.n_docs)
-                    print(word)
-                    print("heyyyyyyyyyyyyyyyy")
+
                 idf = np.log((1 + self.n_docs) / (1 + self.docs_word_freq[self.docs_vocab[word]])) + 1
             tfidf[idx] = tf * idf
-            if tfidf[idx] < 0:
-                print(word)
-                print('awwwwwwww')
-        print(tfidf)
-        print(vocab)
+
         return normalize([tfidf])[0]
 
     def get_score(self, sentence, text_info, words_already_in_summ, k, m, min_sentence_len):
-        # sentence is lowercased.
-        # sentence is not modified just been tokenized
+
         sentence = sentence.lower()
         tfidf_vect, vocab = text_info['tfidf'], text_info['vocab']
         words = [word for word in self.word_tokenize(sentence) if
                  (word not in stoplist) and (re.search('[a-zA-Z]', word) is not None)]
         words = [self.lemmatize(word, word=True) for word in words]
-        print('sentence == {}'.format(sentence))
-        print('words = ')
-        print(words)
+
         n_words = 0
         score = 0
         for word in words:
@@ -120,17 +112,13 @@ class Ranker:
 
         if n_words < min_sentence_len:
             if n_words == 0:
-                print("{} {}".format(0, sentence))
                 return 0
-            print("---> {} {}".format((score / n_words) * m, sentence))
             return (score / n_words) * m
         words_already_in_summ.update(words)
         return score / n_words
 
     def rank_sentences(self, text, k=0.5, min_sentence_len=3, m=0.8):
         text_info = self.process_text(text)
-        print("text_info['vocab']")
-        print(text_info['vocab'])
         sentences = [(i, sentence) for i, sentence in enumerate(text_info['sentences'])]
         selected_sentences = []
         words_in_summ = set()
@@ -144,17 +132,8 @@ class Ranker:
             sentences.remove((i, selected_sentence))
             words_in_summ.update(self.word_tokenize(selected_sentence))
             n_selected += 1
-        return selected_sentences#, text_info['tfidf'], text_info['vocab']
+        return selected_sentences
 
-    # def read_newsroom_data(self, path, n=5000):
-    #     data = []
-    #     with gzip.open(path) as f:
-    #         for i, ln in enumerate(f):
-    #             if i >= n:
-    #                 break
-    #             obj = json.loads(ln)
-    #             data.append(obj)
-    #     return data
 
     def lemmatize(self, text, word=False):
         '''text is lowercased.'''
@@ -168,11 +147,24 @@ class Ranker:
 
 class Displayer:
     @staticmethod
+    def show_custom(info, n_sentences):
+        text = info['text']#.replace('``', '""')
+        top_n_my_model = info['my_model_result'][:n_sentences]
+
+        st.subheader('My Summary')
+        sorted_summ = sorted(top_n_my_model, key=lambda sentence: sentence[0])
+
+        for sentence in sorted_summ:
+            st.markdown('{}\n'.format(sentence[1]))
+        sentences_group = dict()
+        sentences_group[0] = [sentence[1] for sentence in top_n_my_model]
+        highlighted_text = Highlighter.get_highlighted_html(text, sentences_group)
+        st.subheader('Highlights Displayed')
+        st.markdown(highlighted_text, unsafe_allow_html=True)
+
+    @staticmethod
     def show_cnn(info, n_sentences):
-        # info['text'] == cnn_ref_text[doc_i]
-        # info['my_model_result'] == cnn_tfidf_ret[doc_i]
-        # info['presumm_result'] == cnn_presumm_ret[doc_i]
-        # info['cnn_ref_summary'] == cnn_ref_summaries[doc_i]
+
         text = info['text'].replace('``', '""')
         top_n_my_model = info['my_model_result'][:n_sentences] #self.cnn_tfidf_ret[doc_i][:self.n_sentences]
         top_n_presumm = info['presumm_result'][:n_sentences]
@@ -181,15 +173,10 @@ class Displayer:
         sentences_group[0] = [sentence[1].replace('``', '""') for sentence in top_n_my_model] # mine
         sentences_group[1] = [sentence.replace('``', '""') for sentence in top_n_presumm]
 
-        # highlighted_indices = Highlighter.get_highlight_indices(text, sentences_group)
-        #highlighted_text = self.get_highlight_html(text, highlighted_indices)
+
         highlighted_text = Highlighter.get_highlighted_html(text,sentences_group)
-        print('highlighted text')
-        print(highlighted_text)
+
         st.markdown(highlighted_text, unsafe_allow_html=True)
-
-        # self.display_tfidf(doc_i,'CNN')
-
 
         st.subheader('Reference Summary')
         st.markdown('{}'.format(
@@ -244,18 +231,18 @@ class Highlighter:
         for idx in intersect_indices:
             indices_with_group_id.append(idx + (intersect_group_id,))
         ans =  sorted(indices_with_group_id, key=lambda my_tuple: my_tuple[0])
-        print('indices')
-        print(ans)
+
         return ans
 
     @staticmethod
     def compute_highlighted_text(text, indices, colors={0:'#D0F15F',1:'#90F9E3',2:'#E9B2ED'}):
         highlighted_text = ''
         last_pos = 0
+
         for index in indices:
             start, end, color_id = index
             color_code = colors[color_id]
-            print('I am highlighting!!')
+
             highlighted_text += text[last_pos:start] + '<span style="background-color: {}">'.format(color_code) + text[
                                                                                                                   start:end] + '</span>'
             last_pos = end
