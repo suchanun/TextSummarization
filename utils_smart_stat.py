@@ -11,6 +11,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import normalize
 import re
 import streamlit as st
+import plotly.graph_objects as go
 
 
 
@@ -84,7 +85,6 @@ class Ranker:
             if word not in self.docs_vocab:
                 idf = d
             else:
-
                 idf = np.log((1 + self.n_docs) / (1 + self.docs_word_freq[self.docs_vocab[word]])) + 1
             tfidf[idx] = tf * idf
 
@@ -93,6 +93,7 @@ class Ranker:
     def get_score(self, sentence, text_info, words_already_in_summ, k, m, min_sentence_len):
 
         sentence = sentence.lower()
+
         tfidf_vect, vocab = text_info['tfidf'], text_info['vocab']
         words = [word for word in self.word_tokenize(sentence) if
                  (word not in stoplist) and (re.search('[a-zA-Z]', word) is not None)]
@@ -117,7 +118,7 @@ class Ranker:
         words_already_in_summ.update(words)
         return score / n_words
 
-    def rank_sentences(self, text, k=0.5, min_sentence_len=3, m=0.8):
+    def rank_sentences(self, text, k=0.5, min_sentence_len=4, m=0.8):
         text_info = self.process_text(text)
         sentences = [(i, sentence) for i, sentence in enumerate(text_info['sentences'])]
         selected_sentences = []
@@ -163,20 +164,30 @@ class Displayer:
         st.markdown(highlighted_text, unsafe_allow_html=True)
 
     @staticmethod
+    def display_figure(x,y,title,xaxis_title,yaxis_title,mode='lines+markers'):
+
+        fig = go.Figure(data=go.Scatter(x=x, y=y, mode=mode ))
+        fig.update_layout(title=title,
+                          xaxis_title=xaxis_title,
+                          yaxis_title=yaxis_title)
+        st.plotly_chart(fig)
+
+    @staticmethod
     def show_cnn(info, n_sentences):
 
-        text = info['text'].replace('``', '""')
+        text = info['text']#.replace('``', '""')
         top_n_my_model = info['my_model_result'][:n_sentences] #self.cnn_tfidf_ret[doc_i][:self.n_sentences]
         top_n_presumm = info['presumm_result'][:n_sentences]
         top_n_presumm = sorted(top_n_presumm, key=lambda sentence: text.find(sentence))
         sentences_group = dict()
-        sentences_group[0] = [sentence[1].replace('``', '""') for sentence in top_n_my_model] # mine
-        sentences_group[1] = [sentence.replace('``', '""') for sentence in top_n_presumm]
+        #.replace('``', '""'
+        sentences_group[0] = [sentence[1] for sentence in top_n_my_model] # mine
+        sentences_group[1] = [sentence for sentence in top_n_presumm]
 
 
         highlighted_text = Highlighter.get_highlighted_html(text,sentences_group)
 
-        st.markdown(highlighted_text, unsafe_allow_html=True)
+        st.markdown(highlighted_text.replace('``', '""'), unsafe_allow_html=True)
 
         st.subheader('Reference Summary')
         st.markdown('{}'.format(
