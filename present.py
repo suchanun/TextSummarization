@@ -71,6 +71,11 @@ def run_app_smart():
         info['presumm_result'] = data['cnn_presumm_ret'][doc_i]
         info['cnn_ref_summary'] = data['cnn_ref_summaries'][doc_i]
         Displayer.show_cnn(info,n_sentences)
+        xs = list(range((len(info['my_model_result']))))
+        sortedByPos = sorted(info['my_model_result'], key=lambda tup: tup[0])
+        Displayer.display_figure(x=xs, y=[tup[2] for tup in sortedByPos], title='score by position',
+                                 xaxis_title='position', yaxis_title='score')
+
     elif dataset == 'Custom Input':
 
         custom_text = st.text_area('text to be summarized',height=400)
@@ -79,6 +84,9 @@ def run_app_smart():
             info['text'] = custom_text
             info['my_model_result'] = ranker.rank_sentences(custom_text,k=k,m=m)
             Displayer.show_custom(info, n_sentences)
+            xs = list(range((len(info['my_model_result']))))
+            sortedByPos = sorted(info['my_model_result'],key=lambda tup: tup[0])
+            Displayer.display_figure(x=xs,y=[tup[2] for tup in sortedByPos],title='score by position',xaxis_title='position',yaxis_title='score')
 
 
 def run_app_simple():
