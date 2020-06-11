@@ -96,7 +96,7 @@ class Ranker:
 
         tfidf_vect, vocab = text_info['tfidf'], text_info['vocab']
         words = [word for word in self.word_tokenize(sentence) if
-                 (word not in stoplist) and (re.search('[a-zA-Z]', word) is not None)]
+                 (word not in self.stoplist) and (re.search('[a-zA-Z]', word) is not None)]
         words = [self.lemmatize(word, word=True) for word in words]
 
         n_words = 0
@@ -118,7 +118,7 @@ class Ranker:
         words_already_in_summ.update(words)
         return score / n_words
 
-    def rank_sentences(self, text, k=0.5, min_sentence_len=4, m=0.8):
+    def rank_sentences(self, text, k=0.5, min_sentence_len=4, m=0.3):
         text_info = self.process_text(text)
         sentences = [(i, sentence) for i, sentence in enumerate(text_info['sentences'])]
         selected_sentences = []
@@ -171,9 +171,8 @@ class Displayer:
                           xaxis_title=xaxis_title,
                           yaxis_title=yaxis_title)
         st.plotly_chart(fig)
-
     @staticmethod
-    def show_cnn(info, n_sentences):
+    def show(info, n_sentences):
 
         text = info['text']#.replace('``', '""')
         top_n_my_model = info['my_model_result'][:n_sentences] #self.cnn_tfidf_ret[doc_i][:self.n_sentences]
@@ -187,11 +186,16 @@ class Displayer:
 
         highlighted_text = Highlighter.get_highlighted_html(text,sentences_group)
 
+        if 'title' in info:
+            st.header(info['title'])
         st.markdown(highlighted_text.replace('``', '""'), unsafe_allow_html=True)
-
+        xs = list(range((len(info['my_model_result']))))
+        sortedByPos = sorted(info['my_model_result'], key=lambda tup: tup[0])
+        Displayer.display_figure(x=xs, y=[tup[2] for tup in sortedByPos], title='score by position',
+                                 xaxis_title='position', yaxis_title='score')
         st.subheader('Reference Summary')
         st.markdown('{}'.format(
-            info['cnn_ref_summary']))
+            info['ref_summary']))
         st.subheader('My Summary')
 
         sorted_summ = sorted(top_n_my_model, key=lambda sentence: sentence[0])
@@ -203,6 +207,8 @@ class Displayer:
         st.subheader('PreSumm Summary')
         for sentence in top_n_presumm:
             st.markdown('{}\n'.format(sentence))
+
+
 
 class Highlighter:
 
