@@ -172,7 +172,7 @@ class Displayer:
                           yaxis_title=yaxis_title)
         st.plotly_chart(fig)
     @staticmethod
-    def show(info, n_sentences):
+    def show(info, n_sentences,benchmark=False,pos=0):
 
         text = info['text']#.replace('``', '""')
         top_n_my_model = info['my_model_result'][:n_sentences] #self.cnn_tfidf_ret[doc_i][:self.n_sentences]
@@ -184,29 +184,44 @@ class Displayer:
         sentences_group[1] = [sentence for sentence in top_n_presumm]
 
 
-        highlighted_text = Highlighter.get_highlighted_html(text,sentences_group)
+        highlighted_text = Highlighter.get_highlighted_html(text,sentences_group) if not benchmark else text
 
         if 'title' in info:
             st.header(info['title'])
         st.markdown(highlighted_text.replace('``', '""'), unsafe_allow_html=True)
         xs = list(range((len(info['my_model_result']))))
         sortedByPos = sorted(info['my_model_result'], key=lambda tup: tup[0])
-        Displayer.display_figure(x=xs, y=[tup[2] for tup in sortedByPos], title='score by position',
+        if not benchmark:
+            Displayer.display_figure(x=xs, y=[tup[2] for tup in sortedByPos], title='score by position',
                                  xaxis_title='position', yaxis_title='score')
         st.subheader('Reference Summary')
         st.markdown('{}'.format(
             info['ref_summary']))
-        st.subheader('My Summary')
-
         sorted_summ = sorted(top_n_my_model, key=lambda sentence: sentence[0])
+        if benchmark:
+            if pos==0:
+                st.subheader(0)
+                for sentence in sorted_summ:
+                    st.markdown('{}\n'.format(sentence[1]))
+                st.subheader(1)
+                for sentence in top_n_presumm:
+                    st.markdown('{}\n'.format(sentence))
+            else:
+                st.subheader(0)
+                for sentence in top_n_presumm:
+                    st.markdown('{}\n'.format(sentence))
+                st.subheader(1)
+                for sentence in sorted_summ:
+                    st.markdown('{}\n'.format(sentence[1]))
+        else:
+            st.subheader('My Summary')
 
+            for sentence in sorted_summ:
+                st.markdown('{}\n'.format(sentence[1]))
 
-        for sentence in sorted_summ:
-            st.markdown('{}\n'.format(sentence[1]))
-
-        st.subheader('PreSumm Summary')
-        for sentence in top_n_presumm:
-            st.markdown('{}\n'.format(sentence))
+            st.subheader('PreSumm Summary')
+            for sentence in top_n_presumm:
+                st.markdown('{}\n'.format(sentence))
 
 
 
