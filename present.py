@@ -23,11 +23,11 @@ def main():
     elif app_mode == 'Smart stat with tf-idf':
         run_app_smart()
     else:
-        run_app_smart(benchmark=True)
+        run_app_smart()
 
 
 
-def run_app_smart(benchmark=False):
+def run_app_smart():
 
     dataset = st.sidebar.radio('Dataset', ( 'Newsroom','CNN', 'Custom Input'))
     one_minus_k = st.sidebar.slider(
@@ -75,7 +75,7 @@ def run_app_smart(benchmark=False):
         info = dict()
         if dataset == 'CNN':
             info['text'] = data['cnn_ref_text'][doc_i]
-            info['my_model_result'] = ranker.rank_sentences(info['text'],k=k)#m=m
+            info['my_model_result'],info['keywords'] = ranker.rank_sentences(info['text'],k=k)#m=m
             info['presumm_result'] = data['cnn_presumm_ret'][doc_i]
             info['ref_summary'] = data['cnn_ref_summaries'][doc_i]
             # Displayer.show(info, n_sentences)
@@ -83,7 +83,7 @@ def run_app_smart(benchmark=False):
             info['text'] = data['ref_newsroom_data'][doc_i]['text']
             info['title'] = data['ref_newsroom_data'][doc_i]['title']
             info['presumm_result'] = data['presumm_newsroom'][doc_i]
-            info['my_model_result'] = ranker.rank_sentences(info['text'], k=k)  # m=m
+            info['my_model_result'],info['keywords'] = ranker.rank_sentences(info['text'], k=k)  # m=m
             info['ref_summary'] = data['ref_newsroom_data'][doc_i]['summary']
             # Displayer.show(info, n_sentences)
         if app_mode == 'benchmark':
@@ -96,7 +96,7 @@ def run_app_smart(benchmark=False):
         if  custom_text != '':
             info = dict()
             info['text'] = custom_text
-            info['my_model_result'] = ranker.rank_sentences(custom_text,k=k)#,m=m)
+            info['my_model_result'],info['keywords']= ranker.rank_sentences(custom_text,k=k)#,m=m)
             Displayer.show_custom(info, n_sentences)
             xs = list(range((len(info['my_model_result']))))
             sortedByPos = sorted(info['my_model_result'],key=lambda tup: tup[0])
@@ -146,7 +146,7 @@ def load_data():
     data['cnn_presumm_ret'] = pickle.load(open('./data/cnn_presumm_1084_by_sentence_score','rb'))#pickle.load(open('./data/cnn_presumm_ret','rb'))
     # simple_presentation = Presentation(cnn_ref_text, cnn_ref_summaries, cnn_tfidf_ret, cnn_presumm_ret,
     #                             presumm_newsroom, tfidf_newsroom, ref_newsroom_data)
-    data['smart_ranker'] = pickle.load(open('./data/ranker.pkl','rb'))
+    data['smart_ranker'] = pickle.load(open('./data/ranker_fixed_stoplist.pkl','rb')) #ranker_fixed_stoplist.pkl
     data['b_indices'] = pickle.load(open('./data/benchmark_indices.pkl','rb'))
     data['b_pos'] = pickle.load(open('./data/benchmark_positions.pkl','rb'))
     return data #[cnn_ref_text,cnn_ref_summaries,cnn_tfidf_ret,cnn_presumm_ret,presumm_newsroom,tfidf_newsroom,ref_newsroom_data]

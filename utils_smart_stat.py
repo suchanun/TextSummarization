@@ -35,7 +35,10 @@ class Ranker:
         self.sentence_tokenize = sentence_tokenize
         self.word_tokenize = word_tokenize
         self.n_docs = n_docs
-        self.stoplist = stoplist
+        self.stoplist = []
+        for word in stoplist:
+            for token in self.word_tokenize(word):
+                self.stoplist.append(token)#(re.sub('^[^a-zA-Z]*|[^a-zA-Z]*$','',token))
         self.smooth_idf = smooth_idf
 
         count_vect = self.get_new_countvect()
@@ -89,6 +92,23 @@ class Ranker:
             tfidf[idx] = tf * idf
 
         return normalize([tfidf])[0]
+    def get_keywords(self,tfidf,vocab,n):
+        tfidf_tup = [(i,val) for i,val in enumerate(tfidf)]
+        tfidf_tup = sorted(tfidf_tup,key=lambda tup:tup[1],reverse=True)
+        keywords = []
+        indices = [tfidf_tup[i][0] for i in range(n)]
+
+        for idx in indices:
+            for word in vocab:
+                if vocab[word] == idx:
+                    keywords.append(word)
+                    break
+            else:
+                continue
+            continue
+        return keywords
+
+
 
     def get_score(self, sentence, text_info, words_already_in_summ, k, m, min_sentence_len):
 
@@ -117,9 +137,13 @@ class Ranker:
             return (score / n_words) * m
         words_already_in_summ.update(words)
         return score / n_words
+   # def get_keywords(self,text_info,n):
 
-    def rank_sentences(self, text, k=0.5, min_sentence_len=4, m=0.3):
+
+    def rank_sentences(self, text, k=0.5, min_sentence_len=4, m=0.3,n_keywords=5):
         text_info = self.process_text(text)
+        # keywords = self.get_keywords(text,tfidf,vocab)
+        keywords = self.get_keywords(text_info['tfidf'], text_info['vocab'], n_keywords)
         sentences = [(i, sentence) for i, sentence in enumerate(text_info['sentences'])]
         selected_sentences = []
         words_in_summ = set()
@@ -133,7 +157,7 @@ class Ranker:
             sentences.remove((i, selected_sentence))
             words_in_summ.update(self.word_tokenize(selected_sentence))
             n_selected += 1
-        return selected_sentences
+        return selected_sentences,keywords
 
 
     def lemmatize(self, text, word=False):
@@ -218,7 +242,9 @@ class Displayer:
 
             for sentence in sorted_summ:
                 st.markdown('{}\n'.format(sentence[1]))
-
+            st.subheader('Keywords')
+            #for word in info['keywords']:
+            st.markdown(', '.join(info['keywords']))
             st.subheader('PreSumm Summary')
             for sentence in top_n_presumm:
                 st.markdown('{}\n'.format(sentence))
