@@ -146,7 +146,7 @@ def load_data():
     data['cnn_presumm_ret'] = pickle.load(open('./data/cnn_presumm_1084_by_sentence_score','rb'))#pickle.load(open('./data/cnn_presumm_ret','rb'))
     # simple_presentation = Presentation(cnn_ref_text, cnn_ref_summaries, cnn_tfidf_ret, cnn_presumm_ret,
     #                             presumm_newsroom, tfidf_newsroom, ref_newsroom_data)
-    data['smart_ranker'] = pickle.load(open('./data/ranker_fixed_stoplist.pkl','rb')) #ranker_fixed_stoplist.pkl
+    data['smart_ranker'] = pickle.load(open('./data/ranker_fixed_stoplist_punc.pkl','rb')) #ranker_fixed_stoplist.pkl
     data['b_indices'] = pickle.load(open('./data/benchmark_indices.pkl','rb'))
     data['b_pos'] = pickle.load(open('./data/benchmark_positions.pkl','rb'))
     return data #[cnn_ref_text,cnn_ref_summaries,cnn_tfidf_ret,cnn_presumm_ret,presumm_newsroom,tfidf_newsroom,ref_newsroom_data]

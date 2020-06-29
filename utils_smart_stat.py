@@ -13,16 +13,27 @@ import re
 import streamlit as st
 import plotly.graph_objects as go
 
-
+from string import punctuation
 
 tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 stoplist = stopwords.words('english')
 
 
+def word_tokenize_custom(text):
+    return [w.strip(punctuation) for w in word_tokenize(text)]
 class Ranker:
 
     def __init__(self, folder_name, dataset, suffix='.story', n_docs=5000, stoplist=stopwords.words('english'),
-                 smooth_idf=True, sentence_tokenize=tokenizer.tokenize, word_tokenize=word_tokenize):
+                 smooth_idf=True, sentence_tokenize=tokenizer.tokenize, word_tokenize=word_tokenize_custom):
+        self.sentence_tokenize = sentence_tokenize
+        self.word_tokenize = word_tokenize#lambda text: [w.strip(punctuation) for w in word_tokenize(text)]
+        self.n_docs = n_docs
+        self.stoplist = []
+        for word in stoplist:
+            for token in self.word_tokenize(word):
+                self.stoplist.append(token)  # (re.sub('^[^a-zA-Z]*|[^a-zA-Z]*$','',token))
+                self.stoplist.append(token.strip(punctuation))
+        self.stoplist = set(self.stoplist)
         if dataset.lower() == 'cnn':
             filenames = (filename for filename in os.listdir(folder_name) if filename.endswith(suffix))
             lemmatized_texts = (
@@ -32,13 +43,7 @@ class Ranker:
             newsroom_data = self.read_newsroom_data(folder_name)
             lemmatized_texts = (self.lemmatize(data['text']) for data in newsroom_data)
 
-        self.sentence_tokenize = sentence_tokenize
-        self.word_tokenize = word_tokenize
-        self.n_docs = n_docs
-        self.stoplist = []
-        for word in stoplist:
-            for token in self.word_tokenize(word):
-                self.stoplist.append(token)#(re.sub('^[^a-zA-Z]*|[^a-zA-Z]*$','',token))
+
         self.smooth_idf = smooth_idf
 
         count_vect = self.get_new_countvect()
@@ -48,8 +53,6 @@ class Ranker:
         # self.docs_word_freq /= np.sum(self.docs_word_freq)
         self.docs_vocab = count_vect.vocabulary_
 
-    def get_vocabs(self):
-        return self.vocab
 
     def get_new_countvect(self):
         return CountVectorizer(tokenizer=self.word_tokenize,
@@ -248,6 +251,68 @@ class Displayer:
             st.subheader('PreSumm Summary')
             for sentence in top_n_presumm:
                 st.markdown('{}\n'.format(sentence))
+
+
+
+class Highlighter:
+
+    @staticmethod
+    def get_highlighted_html(text,sentences_group, intersect_group_id=2):
+        highlighted_indices = Highlighter.get_highlight_indices(text, sentences_group, intersect_group_id)
+        return Highlighter.compute_highlighted_text(text, highlighted_indices)
+
+    @staticmethod
+    def get_highlight_indices( text, sentences_group, intersect_group_id):
+        def has_duplicate( start_end_indices, start_idx):
+            for index in start_end_indices:
+                if index[0] == start_idx:
+                    return True
+            return False
+
+        text = text.lower()
+        indices_with_group_id = []
+        indices_by_groupID = dict()
+        for group_id in sentences_group:
+            indices_by_groupID[group_id] = set()
+            for sentence in sentences_group[group_id]:
+                sentence = sentence.lower().strip()
+                start_idx = text.find(sentence)
+                while has_duplicate(indices_by_groupID[group_id], start_idx):
+                    start_idx = text.find(sentence, start_idx + len(sentence))
+                if start_idx == -1:
+                    continue
+                index = (start_idx, start_idx + len(sentence))
+                indices_by_groupID[group_id].add(index)
+        intersect_indices = set.intersection(*[indices_by_groupID[gid] for gid in sentences_group])
+        for group_id in sentences_group:
+            indices = indices_by_groupID[group_id]
+            for index in indices:
+                if index not in intersect_indices:
+                    indices_with_group_id.append(index + (group_id,))
+        for idx in intersect_indices:
+            indices_with_group_id.append(idx + (intersect_group_id,))
+        ans =  sorted(indices_with_group_id, key=lambda my_tuple: my_tuple[0])
+
+        return ans
+
+    @staticmethod
+    def compute_highlighted_text(text, indices, colors={0:'#D0F15F',1:'#90F9E3',2:'#E9B2ED'}):
+        highlighted_text = ''
+        last_pos = 0
+
+        for index in indices:
+            start, end, color_id = index
+            color_code = colors[color_id]
+
+            highlighted_text += text[last_pos:start] + '<span style="background-color: {}">'.format(color_code) + text[
+                                                                                                                  start:end] + '</span>'
+            last_pos = end
+        highlighted_text += text[last_pos:]
+        return highlighted_text
+
+
+
+
 
 
 
