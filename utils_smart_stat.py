@@ -179,7 +179,7 @@ class Displayer:
         text = info['text']#.replace('``', '""')
         top_n_my_model = info['my_model_result'][:n_sentences]
 
-        st.subheader('My Summary')
+        st.subheader('Our Summary')
         sorted_summ = sorted(top_n_my_model, key=lambda sentence: sentence[0])
 
         for sentence in sorted_summ:
@@ -241,14 +241,14 @@ class Displayer:
                 for sentence in sorted_summ:
                     st.markdown('{}\n'.format(sentence[1]))
         else:
-            st.subheader('My Summary')
+            st.subheader('Our Summary')
 
             for sentence in sorted_summ:
                 st.markdown('{}\n'.format(sentence[1]))
             st.subheader('Keywords')
             #for word in info['keywords']:
             st.markdown(', '.join(info['keywords']))
-            st.subheader('PreSumm Summary')
+            st.subheader('PreSumm\'s Summary')
             for sentence in top_n_presumm:
                 st.markdown('{}\n'.format(sentence))
 
