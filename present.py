@@ -3,19 +3,21 @@ from utils import *
 from utils_smart_stat import *
 
 st.sidebar.title("What to do")
-app_mode = st.sidebar.selectbox("Choose the app mode",
-        ["Simple tf-idf", "Smart stat with tf-idf","benchmark"])
+app_mode = "Smart stat with tf-idf"
+    # st.sidebar.selectbox("Choose the app mode",
+    #     ["Simple tf-idf", "Smart stat with tf-idf","benchmark"])
 colors_dict = {0:'#D0F15F',1:'#90F9E3',2:'#E9B2ED'}
 
 def main():
-    st.title('Rank sentences by {}'.format(app_mode))
+    st.title('Extractive Summarization'.format(app_mode))
+    #st.subheader('Our result v.s. Presumm\'s')
     if app_mode == 'Simple tf-idf':
 
         st.markdown(
-            '<p style="font-size:17px"><span style="background-color: {}">My summary</span>'.format(colors_dict[0]),
+            '<p style="font-size:17px"><span style="background-color: {}">Our summary</span>'.format(colors_dict[0]),
             unsafe_allow_html=True)
         st.markdown(
-            '<p style="font-size:17px"><span style="background-color: {}">Their summary</span>'.format(colors_dict[1]),
+            '<p style="font-size:17px"><span style="background-color: {}">Presumm\'s summary</span>'.format(colors_dict[1]),
             unsafe_allow_html=True)
         st.markdown('<p style="font-size:17px"><span style="background-color: {}">Both</span>'.format(colors_dict[2]),
                     unsafe_allow_html=True)
@@ -48,10 +50,10 @@ def run_app_smart():
 
 
         st.markdown(
-            '<p style="font-size:17px"><span style="background-color: {}">My summary</span>'.format(colors_dict[0]),
+            '<p style="font-size:17px"><span style="background-color: {}">Our summary</span>'.format(colors_dict[0]),
             unsafe_allow_html=True)
         st.markdown(
-            '<p style="font-size:17px"><span style="background-color: {}">Their summary</span>'.format(colors_dict[1]),
+            '<p style="font-size:17px"><span style="background-color: {}">Presumm\'s summary</span>'.format(colors_dict[1]),
             unsafe_allow_html=True)
         st.markdown('<p style="font-size:17px"><span style="background-color: {}">Both</span>'.format(colors_dict[2]),
                     unsafe_allow_html=True)
