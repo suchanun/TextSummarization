@@ -11,9 +11,7 @@ ADD . /app
 # Install dependencies
 RUN pip install -r requirements.txt
 
-RUN python -m nltk.downloader punkt
-RUN python -m nltk.downloader wordnet
-RUN python -m nltk.downloader stopwords
+RUN python -m nltk.downloader punkt wordnet stopwords averaged_perceptron_tagger
 # copying all files over
 COPY . /app
 
