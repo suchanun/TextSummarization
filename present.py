@@ -1,12 +1,18 @@
 import pickle
 from utils import *
 from utils_smart_stat import *
+import SessionState
 
 st.sidebar.title("What to do")
 app_mode = "Smart stat with tf-idf"
     # st.sidebar.selectbox("Choose the app mode",
     #     ["Simple tf-idf", "Smart stat with tf-idf","benchmark"])
 colors_dict = {0:'#D0F15F',1:'#90F9E3',2:'#E9B2ED'}
+state = SessionState.get(current_article_num=0)
+print("state")
+print(state)
+print(state.current_article_num)
+# article_number_widget = st.empty()
 
 def main():
     st.title('Extractive Summarization'.format(app_mode))
@@ -31,14 +37,19 @@ def main():
 
 def run_app_smart():
 
-    dataset = st.sidebar.radio('Dataset', ( 'Newsroom','CNN', 'Custom Input'))
+    dataset = st.sidebar.radio('Dataset', ( 'Newsroom','CNN/DM', 'Custom Input'))
     one_minus_k = st.sidebar.slider(
         'keywords: important ---> diverse',
         0.0, 1.0, value=0.3
     )
     k = 1-one_minus_k
     data = load_data()
+    #if app_mode == 'benchmark':
     ranker = data['smart_ranker']
+    #else: #benchmark2
+        #ranker = data['smart_ranker2']
+   # rankers = {'benchmark': ranker, 'benchmark2':ranker2}
+
     # m = st.sidebar.slider(
     #     'm: Select a range of values',
     #     0.0, 1.0, value=0.15  # (25.0, 75.0)
@@ -59,23 +70,24 @@ def run_app_smart():
                     unsafe_allow_html=True)
 
         if app_mode != 'benchmark':
-            article_number = st.sidebar.number_input(label='{} article article number'.format(dataset), value=0,
+            article_number = st.sidebar.number_input(label='{} article number'.format(dataset), value=state.current_article_num,
                                                      format='%d', max_value=n_articles - 1, min_value=0)
             st.sidebar.markdown('or')
             random = st.sidebar.button('random an article')
             if random:
                 doc_i = np.random.randint(1000)
-
+                state.current_article_num = doc_i
             else:
                 doc_i = article_number
+                #state.current_article_num = doc_i #??
         else:
-            article_number = st.sidebar.number_input(label='{} article article number'.format(dataset), value=0,
+            article_number = st.sidebar.number_input(label='{} article number'.format(dataset), value=0,
                                                      format='%d', max_value=100-1, min_value=0)
             doc_i = data['b_indices'][article_number]
 
         st.header('{} {}'.format(dataset, doc_i))
         info = dict()
-        if dataset == 'CNN':
+        if dataset == 'CNN/DM':
             info['text'] = data['cnn_ref_text'][doc_i]
             info['my_model_result'],info['keywords'] = ranker.rank_sentences(info['text'],k=k)#m=m
             info['presumm_result'] = data['cnn_presumm_ret'][doc_i]
@@ -95,7 +107,10 @@ def run_app_smart():
 
     else:
         custom_text = st.text_area('text to be summarized',height=400)
-        if  custom_text != '':
+
+        custom_text = custom_text.strip()
+
+        if  custom_text != '' and re.search('[a-zA-Z]', custom_text):
             info = dict()
             info['text'] = custom_text
             info['my_model_result'],info['keywords']= ranker.rank_sentences(custom_text,k=k)#,m=m)
@@ -110,7 +125,7 @@ def run_app_simple():
     data = load_data()
     presentation = Presentation(data['cnn_ref_text'],data['cnn_ref_summaries'],data['cnn_tfidf_ret'],data['cnn_presumm_ret'],data['presumm_newsroom'],data['tfidf_newsroom'],data['ref_newsroom_data'])
 
-    dataset = st.sidebar.radio('Dataset',('Newsroom','CNN'))
+    dataset = st.sidebar.radio('Dataset',('Newsroom','CNN/DM'))
     presentation.set_dataset(dataset)
     n_sentences = st.sidebar.number_input('number of sentences in summary',value=5,min_value=1)
     presentation.set_n_sentences(n_sentences)
@@ -126,6 +141,7 @@ def run_app_simple():
         doc_i = np.random.randint(1000)
         # print(type(doc_i))
         presentation.show(doc_i)
+        state.current_article_num = doc_i
     else:
         # print(type(article_number))
         presentation.show(article_number)
@@ -148,7 +164,8 @@ def load_data():
     data['cnn_presumm_ret'] = pickle.load(open('./data/cnn_presumm_1084_by_sentence_score','rb'))#pickle.load(open('./data/cnn_presumm_ret','rb'))
     # simple_presentation = Presentation(cnn_ref_text, cnn_ref_summaries, cnn_tfidf_ret, cnn_presumm_ret,
     #                             presumm_newsroom, tfidf_newsroom, ref_newsroom_data)
-    data['smart_ranker'] = pickle.load(open('./data/ranker_fixed_stoplist_punc.pkl','rb')) #ranker_fixed_stoplist.pkl
+    #data['smart_ranker'] = pickle.load(open('./data/ranker_fixed_stoplist_punc.pkl','rb')) #ranker_fixed_stoplist.pkl
+    data['smart_ranker'] =pickle.load(open('./data/tfidf_fixed_lemma_final_ver.pkl','rb'))
     data['b_indices'] = pickle.load(open('./data/benchmark_indices.pkl','rb'))
     data['b_pos'] = pickle.load(open('./data/benchmark_positions.pkl','rb'))
     return data #[cnn_ref_text,cnn_ref_summaries,cnn_tfidf_ret,cnn_presumm_ret,presumm_newsroom,tfidf_newsroom,ref_newsroom_data]
