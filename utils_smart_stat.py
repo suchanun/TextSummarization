@@ -6,6 +6,7 @@ from nltk.tokenize import word_tokenize
 # nltk.download('punkt')
 # nltk.download('wordnet')
 # nltk.download('stopwords')
+from nltk.corpus import wordnet
 from nltk.stem.wordnet import WordNetLemmatizer
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import normalize
@@ -54,9 +55,8 @@ class Ranker:
         self.docs_vocab = count_vect.vocabulary_
 
 
-    def get_new_countvect(self):
-        return CountVectorizer(tokenizer=self.word_tokenize,
-                               preprocessor=lambda x: re.sub(r'(\d[\d\.])+', '', x.lower()), stop_words=self.stoplist)
+    def get_new_countvect(self):#preprocessor=lambda x: re.sub(r'(\d[\d\.])+', '', x.lower())
+        return CountVectorizer(tokenizer=self.word_tokenize, stop_words=self.stoplist)
 
     def process_text(self, text):
         ori_text_nodouble_newline = re.sub(r'\n+', '\n', text).strip()
@@ -75,6 +75,7 @@ class Ranker:
         text_info = dict()
         text_info['word_freq'] = word_count / np.sum(word_count)
         text_info['vocab'] = vocab
+        text_info['n_vocab'] = len(vocab)
         text_info['tfidf'] = self.get_tfidf_vect(text_info['word_freq'], text_info['vocab'])
         text_info['sentences'] = sentences
         text_info['n_sentences'] = n_sentences
@@ -95,7 +96,7 @@ class Ranker:
             tfidf[idx] = tf * idf
 
         return normalize([tfidf])[0]
-    def get_keywords(self,tfidf,vocab,n):
+    def get_keywords(self,tfidf,vocab,n):  ## bug when n > num of words
         tfidf_tup = [(i,val) for i,val in enumerate(tfidf)]
         tfidf_tup = sorted(tfidf_tup,key=lambda tup:tup[1],reverse=True)
         keywords = []
@@ -120,12 +121,12 @@ class Ranker:
         tfidf_vect, vocab = text_info['tfidf'], text_info['vocab']
         words = [word for word in self.word_tokenize(sentence) if
                  (word not in self.stoplist) and (re.search('[a-zA-Z]', word) is not None)]
-        words = [self.lemmatize(word, word=True) for word in words]
+        words = [self.lemmatize(word, is_word=True) for word in words]
 
         n_words = 0
         score = 0
         for word in words:
-            if word not in vocab:
+            if (word not in vocab) or not re.search('[a-zA-Z]', word): # word doesn't contain any alpha letter
                 continue
             n_words += 1
             idx = vocab[word]
@@ -143,8 +144,9 @@ class Ranker:
    # def get_keywords(self,text_info,n):
 
 
-    def rank_sentences(self, text, k=0.5, min_sentence_len=4, m=0.3,n_keywords=5):
+    def rank_sentences(self, text, k=0.5, min_sentence_len=4, m=0.3,n_keywords=5): #keyword
         text_info = self.process_text(text)
+        n_keywords = min(n_keywords,text_info['n_vocab'])
         # keywords = self.get_keywords(text,tfidf,vocab)
         keywords = self.get_keywords(text_info['tfidf'], text_info['vocab'], n_keywords)
         sentences = [(i, sentence) for i, sentence in enumerate(text_info['sentences'])]
@@ -162,16 +164,26 @@ class Ranker:
             n_selected += 1
         return selected_sentences,keywords
 
-
-    def lemmatize(self, text, word=False):
+    def lemmatize(self, text, is_word=False):
         '''text is lowercased.'''
         '''word=False : lemmatize text to put in word count calculator'''
-        if word:
-            if word in self.stoplist:
-                return word
-            return WordNetLemmatizer().lemmatize(text)
+        def get_wordnet_pos(_word):
+            """Map POS tag to first character lemmatize() accepts"""
+            nltk.pos_tag([_word])
+            tag = nltk.pos_tag([_word])[0][1][0].upper()
+            tag_dict = {"J": wordnet.ADJ,
+                        "N": wordnet.NOUN,
+                        "V": wordnet.VERB,
+                        "R": wordnet.ADV}
+            return tag_dict.get(tag, wordnet.NOUN)
+        text = text.lower()
+        if is_word:
+            if (text in self.stoplist) or (not text):
+                return text
+            return WordNetLemmatizer().lemmatize(text,get_wordnet_pos(text))
         words = self.word_tokenize(text)
-        return ' '.join([WordNetLemmatizer().lemmatize(word) if word not in self.stoplist else word for word in words])
+        return ' '.join([WordNetLemmatizer().lemmatize(word,get_wordnet_pos(word)) for word in words if ((word not in self.stoplist) and word) ])
+
 
 class Displayer:
     @staticmethod
@@ -181,9 +193,10 @@ class Displayer:
 
         st.subheader('Our Summary')
         sorted_summ = sorted(top_n_my_model, key=lambda sentence: sentence[0])
-
         for sentence in sorted_summ:
             st.markdown('{}\n'.format(sentence[1]))
+        st.subheader('Keywords')
+        st.markdown(', '.join(info['keywords']))
         sentences_group = dict()
         sentences_group[0] = [sentence[1] for sentence in top_n_my_model]
         highlighted_text = Highlighter.get_highlighted_html(text, sentences_group)
