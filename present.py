@@ -9,9 +9,9 @@ app_mode = "Smart stat with tf-idf"
     #     ["Simple tf-idf", "Smart stat with tf-idf","benchmark"])
 colors_dict = {0:'#D0F15F',1:'#90F9E3',2:'#E9B2ED'}
 state = SessionState.get(current_article_num=0)
-print("state")
-print(state)
-print(state.current_article_num)
+# print("state")
+# print(state)
+# print(state.current_article_num)
 # article_number_widget = st.empty()
 
 def main():
