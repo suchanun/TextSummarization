@@ -33,6 +33,12 @@ def main():
     else:
         run_app_smart()
 
+def all_stopwords(text):
+    words = word_tokenize(text.lower())
+    for word in words:
+        if re.search('[a-zA-Z]', word) and word not in stoplist:
+            return False
+    return True
 
 
 def run_app_smart():
@@ -111,13 +117,16 @@ def run_app_smart():
         custom_text = custom_text.strip()
 
         if  custom_text != '' and re.search('[a-zA-Z]', custom_text):
-            info = dict()
-            info['text'] = custom_text
-            info['my_model_result'],info['keywords']= ranker.rank_sentences(custom_text,k=k)#,m=m)
-            Displayer.show_custom(info, n_sentences)
-            xs = list(range((len(info['my_model_result']))))
-            sortedByPos = sorted(info['my_model_result'],key=lambda tup: tup[0])
-            Displayer.display_figure(x=xs,y=[tup[2] for tup in sortedByPos],title='score by position',xaxis_title='position',yaxis_title='score')
+            if all_stopwords(custom_text):
+                st.markdown("Nothing to be summarized")
+            else:
+                info = dict()
+                info['text'] = custom_text
+                info['my_model_result'],info['keywords']= ranker.rank_sentences(custom_text,k=k)#,m=m)
+                Displayer.show_custom(info, n_sentences)
+                xs = list(range((len(info['my_model_result']))))
+                sortedByPos = sorted(info['my_model_result'],key=lambda tup: tup[0])
+                Displayer.display_figure(x=xs,y=[tup[2] for tup in sortedByPos],title='score by position',xaxis_title='position',yaxis_title='score')
 
 
 def run_app_simple():
