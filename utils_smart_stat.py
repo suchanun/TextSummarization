@@ -231,13 +231,14 @@ class Displayer:
         st.markdown(highlighted_text.replace('``', '""'), unsafe_allow_html=True)
         xs = list(range((len(info['my_model_result']))))
         sortedByPos = sorted(info['my_model_result'], key=lambda tup: tup[0])
-        if not benchmark:
-            Displayer.display_figure(x=xs, y=[tup[2] for tup in sortedByPos], title='score by position',
-                                 xaxis_title='position', yaxis_title='score')
         st.subheader('Reference Summary')
         st.markdown('{}'.format(
             info['ref_summary']))
         sorted_summ = sorted(top_n_my_model, key=lambda sentence: sentence[0])
+        if not benchmark:
+            Displayer.display_figure(x=xs, y=[tup[2] for tup in sortedByPos], title='score by position',
+                                 xaxis_title='position', yaxis_title='score')
+
         if benchmark:
             if pos==0:
                 st.subheader(0)
