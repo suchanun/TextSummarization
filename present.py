@@ -1,37 +1,26 @@
 import pickle
-from utils import *
+
 from utils_smart_stat import *
 import SessionState
+import pythainlp
+from thai_utils import *
 
 st.sidebar.title("What to do")
-app_mode = "Smart stat with tf-idf"
-    # st.sidebar.selectbox("Choose the app mode",
-    #     ["Simple tf-idf", "Smart stat with tf-idf","benchmark"])
+app_mode = st.sidebar.selectbox('language', ('English', 'Thai (an experiment)'))
+
 colors_dict = {0:'#D0F15F',1:'#90F9E3',2:'#E9B2ED'}
-state = SessionState.get(current_article_num=0)
-# print("state")
-# print(state)
-# print(state.current_article_num)
-# article_number_widget = st.empty()
+state = SessionState.get(current_article_num=0,current_thai_article_num=0)
+
 
 def main():
-    st.title('Extractive Summarization'.format(app_mode))
-    #st.subheader('Our result v.s. Presumm\'s')
-    if app_mode == 'Simple tf-idf':
+    st.title('Extractive Summarization')
+    if app_mode == 'Thai (an experiment)':
 
-        st.markdown(
-            '<p style="font-size:17px"><span style="background-color: {}">Our summary</span>'.format(colors_dict[0]),
-            unsafe_allow_html=True)
-        st.markdown(
-            '<p style="font-size:17px"><span style="background-color: {}">Presumm\'s summary</span>'.format(colors_dict[1]),
-            unsafe_allow_html=True)
-        st.markdown('<p style="font-size:17px"><span style="background-color: {}">Both</span>'.format(colors_dict[2]),
-                    unsafe_allow_html=True)
-        run_app_simple()
-    elif app_mode == 'Smart stat with tf-idf':
+        run_thai_app()
+
+    elif app_mode == 'English':
         run_app_smart()
-    else:
-        run_app_smart()
+
 
 def all_stopwords(text):
     words = word_tokenize(text.lower())
@@ -43,23 +32,14 @@ def all_stopwords(text):
 
 def run_app_smart():
 
-    dataset = st.sidebar.radio('Dataset', ( 'Newsroom','CNN/DM', 'Custom Input'))
+    dataset = st.sidebar.radio('Dataset', ( 'Newsroom','CNN', 'Custom Input'))
     one_minus_k = st.sidebar.slider(
-        'keywords: important ---> diverse',
+        'keywords: importance ---> diversity',
         0.0, 1.0, value=0.3
     )
     k = 1-one_minus_k
     data = load_data()
-    #if app_mode == 'benchmark':
     ranker = data['smart_ranker']
-    #else: #benchmark2
-        #ranker = data['smart_ranker2']
-   # rankers = {'benchmark': ranker, 'benchmark2':ranker2}
-
-    # m = st.sidebar.slider(
-    #     'm: Select a range of values',
-    #     0.0, 1.0, value=0.15  # (25.0, 75.0)
-    # )
 
     n_sentences = st.sidebar.number_input('number of sentences in summary', value=5, min_value=1)
     if dataset != 'Custom Input':
@@ -75,25 +55,22 @@ def run_app_smart():
         st.markdown('<p style="font-size:17px"><span style="background-color: {}">Both</span>'.format(colors_dict[2]),
                     unsafe_allow_html=True)
 
-        if app_mode != 'benchmark':
-            article_number = st.sidebar.number_input(label='{} article number'.format(dataset), value=state.current_article_num,
-                                                     format='%d', max_value=n_articles - 1, min_value=0)
-            st.sidebar.markdown('or')
-            random = st.sidebar.button('random an article')
-            if random:
-                doc_i = np.random.randint(1000)
-                state.current_article_num = doc_i
-            else:
-                doc_i = article_number
-                #state.current_article_num = doc_i #??
+
+        article_number = st.sidebar.number_input(label='{} article number'.format(dataset), value=state.current_article_num,
+                                                 format='%d', max_value=n_articles - 1, min_value=0)
+        st.sidebar.markdown('or')
+        random = st.sidebar.button('random an article')
+        if random:
+            doc_i = np.random.randint(1000)
+            state.current_article_num = doc_i
         else:
-            article_number = st.sidebar.number_input(label='{} article number'.format(dataset), value=0,
-                                                     format='%d', max_value=100-1, min_value=0)
-            doc_i = data['b_indices'][article_number]
+            doc_i = article_number
+
+
 
         st.header('{} {}'.format(dataset, doc_i))
         info = dict()
-        if dataset == 'CNN/DM':
+        if dataset == 'CNN':
             info['text'] = data['cnn_ref_text'][doc_i]
             info['my_model_result'],info['keywords'] = ranker.rank_sentences(info['text'],k=k)#m=m
             info['presumm_result'] = data['cnn_presumm_ret'][doc_i]
@@ -105,11 +82,7 @@ def run_app_smart():
             info['presumm_result'] = data['presumm_newsroom'][doc_i]
             info['my_model_result'],info['keywords'] = ranker.rank_sentences(info['text'], k=k)  # m=m
             info['ref_summary'] = data['ref_newsroom_data'][doc_i]['summary']
-            # Displayer.show(info, n_sentences)
-        if app_mode == 'benchmark':
-            Displayer.show(info, n_sentences,benchmark=True,pos=data['b_pos'][article_number])
-        else:
-            Displayer.show(info, n_sentences)
+        Displayer.show(info, n_sentences)
 
     else:
         custom_text = st.text_area('text to be summarized',height=400)
@@ -128,32 +101,38 @@ def run_app_smart():
                 sortedByPos = sorted(info['my_model_result'],key=lambda tup: tup[0])
                 Displayer.display_figure(x=xs,y=[tup[2] for tup in sortedByPos],title='score by position',xaxis_title='position',yaxis_title='score')
 
-
-def run_app_simple():
-
-    data = load_data()
-    presentation = Presentation(data['cnn_ref_text'],data['cnn_ref_summaries'],data['cnn_tfidf_ret'],data['cnn_presumm_ret'],data['presumm_newsroom'],data['tfidf_newsroom'],data['ref_newsroom_data'])
-
-    dataset = st.sidebar.radio('Dataset',('Newsroom','CNN/DM'))
-    presentation.set_dataset(dataset)
-    n_sentences = st.sidebar.number_input('number of sentences in summary',value=5,min_value=1)
-    presentation.set_n_sentences(n_sentences)
-    n_articles = 1000
-
-    article_number = st.sidebar.number_input(label='{} article article number'.format(dataset),value=0,
-        format='%d',max_value=n_articles-1,min_value=0)
-
+def process_thai_text_for_highlight(text):
+    ori_text_nodouble_newline = re.sub(r'\n+', '\n', text).strip()
+    processed_text = ''
+    for paragraph in ori_text_nodouble_newline.split('\n'):
+        psentences = pythainlp.tokenize.sent_tokenize(paragraph)
+        processed_text += ' '.join(psentences) + '\n'
+    return processed_text#.strip()
+def run_thai_app():
+    df,ranker = load_thai_data()
+    n_groups = st.sidebar.number_input('number of sentences in summary', value=5, min_value=1)
+    article_number = st.sidebar.number_input('article number', value=state.current_thai_article_num, min_value=0, max_value=999)
     st.sidebar.markdown('or')
     random = st.sidebar.button('random an article')
-
     if random:
         doc_i = np.random.randint(1000)
-        # print(type(doc_i))
-        presentation.show(doc_i)
-        state.current_article_num = doc_i
+        state.current_thai_article_num = doc_i
     else:
-        # print(type(article_number))
-        presentation.show(article_number)
+        doc_i = article_number
+    st.header('Prachathai {}'.format(doc_i))
+    item = df.iloc[doc_i]
+    text = item['body_text']
+    sentences_with_scores, paragraphs = ranker.rank_phrases(text, n_groups)
+    info = dict()
+    info['title'] = item['title']
+    info['text'] = process_thai_text_for_highlight(text)#text
+    info['paragraphs'] = paragraphs
+    info['sentences_with_scores'] = sentences_with_scores
+    ThaiDisplayer.show_summary_and_text(info)
+
+@st.cache(allow_output_mutation=True)
+def load_thai_data():
+    return pickle.load(open('data/prachathai1000.pkl', 'rb')), pickle.load(open('data/thai_ranker.pkl', 'rb'))
 @st.cache(allow_output_mutation=True)
 def load_data():
     nltk.download('punkt')
@@ -175,8 +154,8 @@ def load_data():
     #                             presumm_newsroom, tfidf_newsroom, ref_newsroom_data)
     #data['smart_ranker'] = pickle.load(open('./data/ranker_fixed_stoplist_punc.pkl','rb')) #ranker_fixed_stoplist.pkl
     data['smart_ranker'] =pickle.load(open('./data/tfidf_fixed_lemma_final_ver.pkl','rb'))
-    data['b_indices'] = pickle.load(open('./data/benchmark_indices.pkl','rb'))
-    data['b_pos'] = pickle.load(open('./data/benchmark_positions.pkl','rb'))
+
+
     return data #[cnn_ref_text,cnn_ref_summaries,cnn_tfidf_ret,cnn_presumm_ret,presumm_newsroom,tfidf_newsroom,ref_newsroom_data]
 
 if __name__ == "__main__":
