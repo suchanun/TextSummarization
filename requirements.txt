@@ -1,5 +1,6 @@
-numpy==1.17.2
 streamlit==0.60.0
-plotly==4.1.0
+numpy==1.17.2
+pythainlp==2.1.4
 nltk==3.5
+plotly==4.1.0
 scikit_learn==0.23.1
