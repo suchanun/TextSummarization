@@ -1,4 +1,4 @@
 
-`pip install -r requirement.txt`
+`pip install -r requirements.txt`
 
 `streamlit run present.py`
